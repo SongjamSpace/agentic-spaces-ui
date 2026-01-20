@@ -325,7 +325,7 @@ export function SocialGraph({ currentUser, twitterUsername }: SocialGraphProps) 
                             data={graphData}
                             width={dimensions.width}
                             height={dimensions.height}
-                            contextLabel={`@${internalTwitterUsername || currentUser?.username}`}
+                            contextLabel={internalTwitterUsername || currentUser?.username ? `@${internalTwitterUsername || currentUser?.username}` : ''}
                             onNodeClick={(node) => {
                                 if (node.id !== 'root') {
                                     window.open(`https://warpcast.com/${node.farcasterUsername}`, '_blank');
@@ -375,19 +375,8 @@ export function SocialGraph({ currentUser, twitterUsername }: SocialGraphProps) 
                             ) : (
                                 <div className="flex flex-col items-center gap-3">
                                     <div className="text-slate-500 text-sm max-w-[200px] text-center">
-                                        Connect your X (Twitter) account to generate your social graph.
+                                        X should be connected with Farcaster to generate the social graph.
                                     </div>
-                                    <a 
-                                        href="https://warpcast.com/~/settings/verified-addresses"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-medium border border-slate-700 transition-colors flex items-center gap-2"
-                                    >
-                                        <span>Link on Warpcast</span>
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                    </a>
                                 </div>
                             )
                         )}
