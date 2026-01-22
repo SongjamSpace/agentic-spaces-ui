@@ -28,6 +28,7 @@ export interface EmpireBuilder {
     empireAddress?: string;
     deploymentStatus?: DeploymentStatus;
     deploymentTxHash?: string;
+    airdropEntries?: { address: string; amount: number }[];
 }
 
 export type EmpireBuilderInput = Omit<EmpireBuilder, 'twitterId' | 'createdAt' | 'updatedAt' | 'tokenAddress' | 'empireAddress' | 'deploymentStatus' | 'deploymentTxHash'>;

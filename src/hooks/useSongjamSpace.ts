@@ -1,6 +1,8 @@
 "use client";
 
 
+import { generateQRWithLogo, uploadQRToFirebase } from '@/services/qr.service';
+
 import { 
   createEmpireBuilder,
   updateDeploymentStatus,
@@ -32,6 +34,7 @@ export interface HostInfo {
   message?: string;
   tokenName?: string;
   tokenSymbol?: string;
+  airdropEntries?: Array<{ address: string; amount: number }>;
 }
 
 // Default token params - can be changed later
@@ -41,7 +44,6 @@ const DEFAULT_TOKEN_PARAMS = {
   imageUrl: '', // Will be set based on host username
 };
 
-// Helper function to auto-deploy token - exported via hook
 export async function autoDeployToken(hostInfo: HostInfo): Promise<{ success: boolean; hostSlug: string }> {
   const { twitterId, username, displayName, fid, signature, message } = hostInfo;
   const hostSlug = username;
@@ -49,7 +51,20 @@ export async function autoDeployToken(hostInfo: HostInfo): Promise<{ success: bo
   // Create default token params with host-specific values
   const tokenName = hostInfo.tokenName || (displayName ? `${displayName} - Songjam Host` : DEFAULT_TOKEN_PARAMS.name);
   const tokenSymbol = hostInfo.tokenSymbol || (username.slice(0, 4).toUpperCase() || DEFAULT_TOKEN_PARAMS.symbol);
-  const imageUrl = ``;
+
+  // Generate QR Code with Logo and Upload to Firebase
+  let imageUrl = '';
+  try {
+    const qrData = `https://my.songjam.space/${username}`;
+    const logoUrl = '/logo-bg-512.png';
+    const qrBlob = await generateQRWithLogo(qrData, logoUrl);
+    imageUrl = await uploadQRToFirebase(qrBlob, `spaces-qr/${username}`);
+  } catch (error) {
+    console.error('Failed to generate/upload QR code, falling back to default or empty:', error);
+    // Keep imageUrl empty or set a fallback if desired
+  }
+
+  const airdropEntries = hostInfo.airdropEntries || [];
 
   try {
     // Step 1: Create the empire builder record
@@ -58,7 +73,8 @@ export async function autoDeployToken(hostInfo: HostInfo): Promise<{ success: bo
       symbol: tokenSymbol,
       imageUrl: imageUrl,
       hostSlug: hostSlug,
-      fid: fid || ''
+      fid: fid || '',
+      airdropEntries
     });
 
     // Step 2: Update status to deploying
@@ -84,7 +100,8 @@ export async function autoDeployToken(hostInfo: HostInfo): Promise<{ success: bo
         imageUrl: imageUrl,
         creatorAddress: creatorAddr,
         signature: signature,
-        message: message
+        message: message,
+        airdropEntries: airdropEntries
       })
     });
 

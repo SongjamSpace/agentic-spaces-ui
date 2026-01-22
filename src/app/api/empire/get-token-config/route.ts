@@ -72,6 +72,12 @@ export async function POST(request: NextRequest) {
                     enableSniperFees: true,
                     sniperFeeDuration: body.sniperFeeDuration || 60,
                 }),
+                
+                // Optional: Airdrop
+                ...(body.airdropEntries && body.airdropEntries.length > 0 && {
+                    enableAirdrop: true,
+                    airdropEntries: body.airdropEntries
+                })
             })
         });
 

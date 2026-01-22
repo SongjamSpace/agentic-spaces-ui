@@ -1,14 +1,11 @@
 "use client";
 
 import React from "react";
-import { useSearchParams } from "next/navigation";
 import { SocialGraph } from "@/components/SocialGraph";
 
 import { NeynarAuthButton, useNeynarContext, SIWN_variant } from "@neynar/react";
 
 export default function SocialPage() {
-  const searchParams = useSearchParams();
-  const twitterUsername = searchParams.get("x") || undefined;
   const { user: neynarUser, isAuthenticated } = useNeynarContext();
 
   return (
@@ -40,8 +37,7 @@ export default function SocialPage() {
       </div>
 
       <div className="w-full max-w-4xl">
-          {twitterUsername && <p className="text-slate-400 mb-2">Viewing graph for: <span className="text-cyan-400">@{twitterUsername}</span></p>}
-          <SocialGraph currentUser={neynarUser} twitterUsername={twitterUsername} />
+          <SocialGraph currentUser={neynarUser} />
       </div>
     </div>
   );

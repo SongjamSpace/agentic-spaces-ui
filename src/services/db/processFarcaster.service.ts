@@ -12,7 +12,7 @@ export interface ProcessFarcasterProfile {
   experimental: {
     neynar_user_score: number;
   }
-  verified_addresses: {
+  verifiedAddresses: {
     eth_addresses: string[];
     sol_addresses: string[];
   };
