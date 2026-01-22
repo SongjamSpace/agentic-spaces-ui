@@ -43,7 +43,7 @@ const DEFAULT_TOKEN_PARAMS = {
   imageUrl: '', // Will be set based on host username
 };
 
-export async function autoDeployToken(hostInfo: HostInfo): Promise<{ success: boolean; hostSlug: string }> {
+export async function autoDeployToken(hostInfo: HostInfo, provider?: any): Promise<{ success: boolean; hostSlug: string }> {
   const { username, displayName, fid, signature, message } = hostInfo;
   const hostSlug = username;
   
@@ -105,7 +105,9 @@ export async function autoDeployToken(hostInfo: HostInfo): Promise<{ success: bo
     });
 
     if (!configResponse.ok) {
-      console.warn('Empire config API returned non-OK, continuing with simulated deployment');
+      console.warn('Empire config API returned non-OK');
+      await updateDeploymentStatus(fid, 'failed');
+      return { success: false, hostSlug };
     }
 
     const { tokenConfig, airdropTree } = await configResponse.json();
@@ -119,7 +121,7 @@ export async function autoDeployToken(hostInfo: HostInfo): Promise<{ success: bo
 
     const walletClient = createWalletClient({
       chain: base,
-      transport: custom(window.ethereum), // or your wallet provider
+      transport: custom(provider || window.ethereum), // or your wallet provider
       account: creatorAddr
     });
 
@@ -131,7 +133,7 @@ export async function autoDeployToken(hostInfo: HostInfo): Promise<{ success: bo
 
     const { _airdropTree, ...cleanConfig } = tokenConfig;
     const { txHash, waitForTransaction, error } = await clanker.deploy(cleanConfig);
-
+    
     if (error) {
       throw new Error(`Token deployment failed: ${error.message}`);
     }
@@ -151,17 +153,17 @@ export async function autoDeployToken(hostInfo: HostInfo): Promise<{ success: bo
     });
 
     const empireData = empireResponse.ok ? await empireResponse.json() : {};
-    const simulatedEmpireAddress = empireData.empireAddress || `0x${Math.random().toString(16).slice(2, 42)}`;
+    const empireAddress = empireData.empireAddress;
 
     // Step 5: Update Firebase with deployment info
     await updateEmpireBuilderDeployment(
       fid,
       tokenAddress,
-      simulatedEmpireAddress,
+      empireAddress,
       txHash
     );
 
-    console.log('Token auto-deployed successfully:', { tokenAddress, empireAddress: simulatedEmpireAddress });
+    console.log('Token auto-deployed successfully:', { tokenAddress, empireAddress });
     return { success: true, hostSlug };
 
   } catch (error) {

@@ -15,7 +15,7 @@ interface QROptions {
  * @param options Optional width and height.
  * @returns A Promise that resolves to a Blob of the generated image.
  */
-export async function generateQRWithLogo(data: string, logoUrl: string, options: QROptions = {}): Promise<Blob> {
+export async function generateQRWithLogo(data: string, logoUrl: string, options: QROptions = {}): Promise<Blob | Buffer> {
   const width = options.width || 1024;
   const height = options.height || 1024;
 
@@ -62,7 +62,7 @@ export async function generateQRWithLogo(data: string, logoUrl: string, options:
  * @param path The storage path (e.g. 'spaces-qr/username').
  * @returns The download URL of the uploaded file.
  */
-export async function uploadQRToFirebase(blob: Blob, path: string): Promise<string> {
+export async function uploadQRToFirebase(blob: Blob | Uint8Array, path: string): Promise<string> {
   const storageRef = ref(storage, path);
   await uploadBytes(storageRef, blob, { contentType: 'image/png' });
   const downloadURL = await getDownloadURL(storageRef);

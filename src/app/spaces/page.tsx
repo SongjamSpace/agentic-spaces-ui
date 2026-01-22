@@ -16,7 +16,7 @@ import { AirdropModal } from "@/components/AirdropModal";
 export default function SpacesPage() {
   const router = useRouter();
   const { user: neynarUser, isAuthenticated } = useNeynarContext();
-  const { walletAddress, isConnected, isSigning, connectWallet, signMessage } = useEthWallet();
+  const { walletAddress, isConnected, isSigning, connectWallet, signMessage, ethWallet } = useEthWallet();
 
   // Get the host's fid for token check
   const hostFid = neynarUser?.fid?.toString();
@@ -137,6 +137,8 @@ export default function SpacesPage() {
         return;
       }
 
+      const provider = await ethWallet?.getEthereumProvider();
+
       const result = await autoDeployToken({
         username: neynarUser?.username || `host_${hostFid.slice(0, 8)}`,
         displayName: neynarUser?.display_name || undefined,
@@ -148,7 +150,7 @@ export default function SpacesPage() {
         tokenName: tokenName,
         tokenSymbol: tokenSymbol,
         airdropEntries: airdropEntries
-      });
+      }, provider);
       if (result.success) {
         setIsTokenDeployed(true);
         setShowAirdropPopup(false);

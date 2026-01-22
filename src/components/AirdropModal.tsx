@@ -23,7 +23,7 @@ export function AirdropModal({
   isSigning,
   tokenSymbol,
 }: AirdropModalProps) {
-  const [totalAmount, setTotalAmount] = useState<number>(250000000);
+  const [totalAmount, setTotalAmount] = useState<number>(260000000);
   const [selectedProfiles, setSelectedProfiles] = useState<Set<string>>(new Set());
 
   // Reset selection when profiles load or modal opens
@@ -63,8 +63,8 @@ export function AirdropModal({
   };
 
   const handleDeployClick = () => {
-    if (totalAmount < 250000000) {
-        alert("Total airdrop amount must be at least 250,000,000");
+    if (totalAmount < 260000000) {
+        alert("Total airdrop amount must be at least 260,000,000");
         return;
     }
 
@@ -122,8 +122,8 @@ export function AirdropModal({
                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">{tokenSymbol}</span>
                  </div>
                  <div className="flex justify-between text-xs">
-                     <span className={`${totalAmount < 250000000 ? 'text-red-400' : 'text-slate-500'}`}>
-                        Minimum allocation: 250,000,000
+                     <span className={`${totalAmount < 260000000 ? 'text-red-400' : 'text-slate-500'}`}>
+                        Minimum allocation: 260,000,000
                      </span>
                      <span className="text-cyan-400">
                         {individualAmount} per wallet
@@ -226,7 +226,7 @@ export function AirdropModal({
              </button>
              <button
                onClick={handleDeployClick}
-               disabled={isDeploying || isSigning || selectedProfiles.size === 0 || totalAmount < 250000000}
+               disabled={isDeploying || isSigning || selectedProfiles.size === 0 || totalAmount < 260000000}
                className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-cyan-600 hover:opacity-90 text-white rounded-xl font-bold shadow-lg shadow-purple-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
              >
                {isSigning ? 'Signing...' : isDeploying ? 'Deploying...' : 'Deploy'}
