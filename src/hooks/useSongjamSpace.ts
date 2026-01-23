@@ -34,6 +34,19 @@ export interface HostInfo {
   tokenName?: string;
   tokenSymbol?: string;
   airdropEntries?: Array<{ address: string; amount: number }>;
+  // Advanced token configuration
+  vaultPercentage?: number;
+  vaultDays?: number;
+  feeType?: 'static' | 'dynamic';
+  initialMarketCap?: number;
+  staticClankerFee?: number;
+  staticPairedFee?: number;
+  dynamicBaseFee?: number;
+  dynamicMaxLpFee?: number;
+  airdropLockupDays?: number;
+  airdropVestingDays?: number;
+  enableSniperFees?: boolean;
+  sniperFeeDuration?: number;
 }
 
 // Default token params - can be changed later
@@ -101,7 +114,20 @@ export async function autoDeployToken(hostInfo: HostInfo, provider?: any): Promi
         creatorAddress: creatorAddr,
         signature: signature,
         message: message,
-        airdropEntries: airdropEntries
+        airdropEntries: airdropEntries,
+        // Advanced configuration options
+        vaultPercentage: hostInfo.vaultPercentage,
+        vaultDays: hostInfo.vaultDays,
+        feeType: hostInfo.feeType,
+        initialMarketCap: hostInfo.initialMarketCap,
+        staticClankerFee: hostInfo.staticClankerFee,
+        staticPairedFee: hostInfo.staticPairedFee,
+        dynamicBaseFee: hostInfo.dynamicBaseFee,
+        dynamicMaxLpFee: hostInfo.dynamicMaxLpFee,
+        airdropLockupDays: hostInfo.airdropLockupDays,
+        airdropVestingDays: hostInfo.airdropVestingDays,
+        enableSniperFees: hostInfo.enableSniperFees,
+        sniperFeeDuration: hostInfo.sniperFeeDuration,
       })
     });
 
@@ -155,6 +181,37 @@ export async function autoDeployToken(hostInfo: HostInfo, provider?: any): Promi
 
     const empireData = empireResponse.ok ? await empireResponse.json() : {};
     const empireAddress = empireData.empireAddress;
+
+    // Step 4.5: Register Airdrop (Optional)
+    if (airdropTree && tokenAddress) {
+      console.log('📦 Registering airdrop with Clanker service...');
+      
+      try {
+        const airdropResponse = await fetch('/api/empire/register-airdrop', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            tokenAddress,
+            airdropTree  // MerkleTree dump from token config
+          })
+        });
+
+        if (!airdropResponse.ok) {
+          const error = await airdropResponse.json();
+          console.error('Failed to register airdrop:', error);
+          throw new Error(`Airdrop registration failed: ${error.error || 'Unknown error'}`);
+        }
+
+        const result = await airdropResponse.json();
+        console.log('✅ Airdrop registered successfully:', result);
+      } catch (airdropError) {
+        console.error('Airdrop registration error:', airdropError);
+        // Don't fail the entire deployment if airdrop registration fails
+        // The token and empire are already deployed
+      }
+    }
 
     // Step 5: Update Firebase with deployment info
     await updateEmpireBuilderDeployment(

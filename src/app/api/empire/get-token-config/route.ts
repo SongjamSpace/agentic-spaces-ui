@@ -50,12 +50,17 @@ export async function POST(request: NextRequest) {
 
                 // Pool Configuration (standard for SANG endpoint)
                 poolType: 'standard',
-                feeType: 'dynamic',
+                feeType: body.feeType || 'dynamic',
                 initialMarketCap: body.initialMarketCap || 10,
 
-                // Dynamic Fees
-                dynamicBaseFee: body.dynamicBaseFee || 1,
-                dynamicMaxLpFee: body.dynamicMaxLpFee || 2.2,
+                // Dynamic or Static Fees
+                ...(body.feeType === 'static' ? {
+                    staticClankerFee: body.staticClankerFee || 1,
+                    staticPairedFee: body.staticPairedFee || 1,
+                } : {
+                    dynamicBaseFee: body.dynamicBaseFee || 1,
+                    dynamicMaxLpFee: body.dynamicMaxLpFee || 2.2,
+                }),
 
                 // Dev buy disabled for sang endpoint
                 enableDevBuy: false,
@@ -77,8 +82,8 @@ export async function POST(request: NextRequest) {
                 ...(body.airdropEntries && body.airdropEntries.length > 0 && {
                     enableAirdrop: true,
                     airdropEntries: body.airdropEntries,
-                    airdropLockupDays: 1,
-                    airdropVestingDays: 1
+                    airdropLockupDays: body.airdropLockupDays || 1,
+                    airdropVestingDays: body.airdropVestingDays || 1
                 })
             })
         });

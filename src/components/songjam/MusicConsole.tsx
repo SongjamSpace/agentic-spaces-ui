@@ -1,8 +1,7 @@
-'use client';
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Play, Pause, Music2, Loader2 } from 'lucide-react';
 import { getMusicUploadsByUserId } from '@/services/storage/dj.storage';
+import { updateMusicState, clearMusicState } from '@/services/db/liveSpaces.db';
 import type { DailyCall } from '@daily-co/daily-js';
 import { db } from '@/services/firebase.service';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -112,15 +111,18 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
                 const gainNode = audioContext.createGain();
                 gainNode.gain.value = 0.7; // 70% volume
 
-                // Create media stream destination
+                // Create media stream destination for Daily.co
                 if (!destinationRef.current) {
                     destinationRef.current = audioContext.createMediaStreamDestination();
                 }
                 const destination = destinationRef.current;
 
-                // Connect: source -> gain -> destination
+                // Connect: source -> gain -> destination (for Daily.co broadcast)
                 sourceNode.connect(gainNode);
                 gainNode.connect(destination);
+                
+                // ALSO connect to local speakers so host can hear it
+                gainNode.connect(audioContext.destination);
 
                 // Get the media stream
                 const mediaStream = destination.stream;
@@ -137,7 +139,12 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
 
                 // Start playback
                 sourceNode.start(0);
-                console.log('Music is now streaming to all participants!');
+                console.log('Music is now streaming!');
+
+                // Save music state to database so participants know music is playing
+                await updateMusicState(hostTwitterUsername, true, 'music-stream');
+                console.log('Music state saved to database');
+                console.log('Note: Daily.co auto-subscribe is enabled, custom tracks should be automatically subscribed');
 
                 // Handle when track ends (though loop=true should prevent this)
                 sourceNode.onended = () => {
@@ -172,6 +179,11 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
                     // Track might not exist
                 });
             }
+
+            // Clear music state from database
+            clearMusicState(hostTwitterUsername).catch(err => {
+                console.error('Error clearing music state:', err);
+            });
         };
     }, [isPlaying, currentTrackIndex, tracks, dailyCallObject]);
 

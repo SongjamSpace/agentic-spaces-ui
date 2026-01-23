@@ -123,7 +123,7 @@ export default function SpacesPage() {
     fetchProfiles();
   }, [deployStep, currentUserTwitterUsername, airdropProfiles.length]);
 
-  const handleDeploy = async (airdropEntries: { address: string; amount: number }[]) => {
+  const handleDeploy = async (airdropEntries: { address: string; amount: number }[], config?: any) => {
     if (!hostFid || !walletAddress) return;
     setIsDeploying(true);
     try {
@@ -149,7 +149,22 @@ export default function SpacesPage() {
         message: signResult.message,
         tokenName: tokenName,
         tokenSymbol: tokenSymbol,
-        airdropEntries: airdropEntries
+        airdropEntries: airdropEntries,
+        // Advanced configuration
+        ...(config && {
+          vaultPercentage: config.vaultPercentage,
+          vaultDays: config.vaultDays,
+          feeType: config.feeType,
+          initialMarketCap: config.initialMarketCap,
+          staticClankerFee: config.staticClankerFee,
+          staticPairedFee: config.staticPairedFee,
+          dynamicBaseFee: config.dynamicBaseFee,
+          dynamicMaxLpFee: config.dynamicMaxLpFee,
+          airdropLockupDays: config.airdropLockupDays,
+          airdropVestingDays: config.airdropVestingDays,
+          enableSniperFees: config.enableSniperFees,
+          sniperFeeDuration: config.sniperFeeDuration,
+        })
       }, provider);
       if (result.success) {
         setIsTokenDeployed(true);
@@ -209,12 +224,12 @@ export default function SpacesPage() {
             <div className="w-full md:w-auto">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-lg">🚀</span>
-                <h2 className="text-lg font-semibold text-white">Empire Builder Token</h2>
+                <h2 className="text-lg font-semibold text-white">Launch Songjam Space Token</h2>
               </div>
               <p className="text-sm text-slate-400">
                 {!isConnected 
-                  ? 'Connect your wallet to deploy your token'
-                  : 'Deploy your token to power your space economy'}
+                  ? 'Connect your wallet to deploy your token to launch your space'
+                  : 'Deploy your token to launch your space'}
               </p>
             </div>
             {!isConnected ? (

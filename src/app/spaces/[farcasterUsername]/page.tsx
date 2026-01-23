@@ -9,7 +9,7 @@ import VoiceOrb from '@/components/songjam/VoiceOrb';
 import SpaceGraphDOM from '@/components/songjam/SpaceGraphDOM';
 import { getEmpireBuilderByHostSlug, EmpireBuilder } from '@/services/db/empireBuilder.db';
 import SpaceChat from '@/components/songjam/SpaceChat';
-import MusicConsole from '@/components/songjam/MusicConsole';
+// import MusicConsole from '@/components/songjam/MusicConsole';
 import { 
     goLive, 
     endSpace,
@@ -292,12 +292,12 @@ const RoomContent = ({
                     </div>
                     
                     {/* Music Console - Host Only */}
-                    {isHost && (
+                    {/* {isHost && (
                         <MusicConsole 
                             hostTwitterUsername={hostProfile.username} 
                             dailyCallObject={daily}
                         />
-                    )}
+                    )} */}
                     
                     <button
                         onClick={handleToggleMic}

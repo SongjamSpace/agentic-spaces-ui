@@ -23,6 +23,9 @@ export interface LiveSpaceDoc {
     participantCount: number;
     lastUpdated: number;
     title?: string;
+    // Music playback state
+    musicPlaying?: boolean;     // Whether music is currently playing
+    musicTrackName?: string;    // Daily.co custom track name for music
 }
 
 // Session record in the subcollection (historical data)
@@ -356,3 +359,33 @@ export async function updateLiveSpaceState(spaceId: string, state: 'Live' | 'End
 
 /** @deprecated Use getLiveSpace instead */
 export const getLiveSpaceByHostSlug = getLiveSpace;
+
+// ============ Music Playback State Functions ============
+
+/**
+ * Update music playback state in the live space document
+ */
+export async function updateMusicState(
+    hostSlug: string,
+    isPlaying: boolean,
+    trackName?: string
+): Promise<void> {
+    try {
+        const docRef = doc(db, LIVE_SPACES_COLLECTION, hostSlug);
+        await updateDoc(docRef, {
+            musicPlaying: isPlaying,
+            musicTrackName: trackName || null,
+            lastUpdated: Date.now(),
+        });
+    } catch (error) {
+        console.error('Error updating music state:', error);
+        throw error;
+    }
+}
+
+/**
+ * Clear music state when music stops
+ */
+export async function clearMusicState(hostSlug: string): Promise<void> {
+    await updateMusicState(hostSlug, false);
+}
