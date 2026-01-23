@@ -71,89 +71,100 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
     // Setup and stream audio to Daily.co when playing
     useEffect(() => {
         if (!isPlaying || !tracks.length || !dailyCallObject) {
-            // Stop audio if not playing
+            // Stop audio if not playing and restore original mic
             if (audioRef.current) {
                 audioRef.current.pause();
             }
-            // Stop custom track if exists
-            if (customTrackNameRef.current && dailyCallObject) {
-                dailyCallObject.stopCustomTrack(customTrackNameRef.current).catch(console.error);
+            
+            // Restore microphone input
+            if (dailyCallObject && customTrackNameRef.current) {
+                dailyCallObject.setInputDevicesAsync({
+                    audioSource: false
+                }).catch(console.error);
                 customTrackNameRef.current = null;
             }
             return;
         }
 
-        const setupAudioTrack = async () => {
+        const setupAudioBroadcast = async () => {
             try {
-                // Stop any existing custom track
-                if (customTrackNameRef.current) {
-                    await dailyCallObject.stopCustomTrack(customTrackNameRef.current);
-                    customTrackNameRef.current = null;
-                }
-
+                console.log('Setting up music broadcast to Daily.co room...');
+                
                 // Create or reuse audio element
                 if (!audioRef.current) {
                     audioRef.current = new Audio();
                     audioRef.current.loop = true;
+                    audioRef.current.volume = 0.7;
                 }
 
                 // Set the audio source
-                audioRef.current.src = tracks[currentTrackIndex].audioUrl;
-                audioRef.current.crossOrigin = 'anonymous'; // For CORS
+                const audioUrl = tracks[currentTrackIndex].audioUrl;
+                console.log('Loading audio from:', audioUrl);
+                audioRef.current.src = audioUrl;
+                audioRef.current.crossOrigin = 'anonymous';
                 
-                // Wait for audio to be ready
-                await new Promise<void>((resolve, reject) => {
-                    if (!audioRef.current) return reject();
-                    
-                    audioRef.current.oncanplay = () => resolve();
-                    audioRef.current.onerror = (e) => {
-                        console.error('Audio loading error:', e);
-                        reject(e);
-                    };
-                    audioRef.current.load();
-                });
-
-                // Play the audio first
+                // Load and play the audio
                 await audioRef.current.play();
                 console.log('Audio playing locally');
 
-                // Create a MediaStream from the audio element
-                // @ts-ignore - captureStream is not in TypeScript types but exists
-                const mediaStream = audioRef.current.captureStream?.() as MediaStream;
+                // Small delay to ensure audio is playing
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                // Create MediaStream from audio element
+                // @ts-ignore - captureStream exists but not in TS types
+                const mediaStream = audioRef.current.captureStream() as MediaStream;
                 
                 if (!mediaStream) {
-                    console.error('captureStream not supported');
-                    return;
+                    throw new Error('captureStream not supported by browser');
                 }
 
-                console.log('MediaStream created:', mediaStream);
+                const audioTracks = mediaStream.getAudioTracks();
+                if (audioTracks.length === 0) {
+                    throw new Error('No audio tracks in MediaStream');
+                }
 
-                // Start custom audio track in Daily
-                const trackName = `music-track-${Date.now()}`;
-                await dailyCallObject.startCustomTrack({
-                    track: mediaStream.getAudioTracks()[0],
-                    trackName,
-                    mode: 'music'
+                console.log('MediaStream created with audio track');
+
+                // Replace the microphone input with the music stream
+                // This makes the music broadcast like the host's voice
+                await dailyCallObject.updateInputSettings({
+                    audio: {
+                        processor: {
+                            type: 'none'
+                        }
+                    }
+                });
+
+                // Set the custom audio track as input
+                await dailyCallObject.setInputDevicesAsync({
+                    audioSource: audioTracks[0]
                 });
                 
-                customTrackNameRef.current = trackName;
-                console.log('Custom track started:', trackName);
+                customTrackNameRef.current = 'music-active';
+                console.log('Music is now broadcasting to all participants through main audio channel');
+
             } catch (err) {
-                console.error('Error setting up audio track:', err);
+                console.error('Error broadcasting music:', err);
                 setIsPlaying(false);
+                setError('Failed to broadcast audio');
             }
         };
 
-        setupAudioTrack();
+        setupAudioBroadcast();
 
         // Cleanup on unmount or when stopping
         return () => {
-            if (customTrackNameRef.current && dailyCallObject) {
-                dailyCallObject.stopCustomTrack(customTrackNameRef.current).catch(console.error);
-                customTrackNameRef.current = null;
-            }
             if (audioRef.current) {
                 audioRef.current.pause();
+            }
+            
+            // Restore microphone when stopping
+            if (dailyCallObject && customTrackNameRef.current) {
+                console.log('Restoring microphone input');
+                dailyCallObject.setInputDevicesAsync({
+                    audioSource: false
+                }).catch(console.error);
+                customTrackNameRef.current = null;
             }
         };
     }, [isPlaying, currentTrackIndex, tracks, dailyCallObject]);
