@@ -9,6 +9,7 @@ import VoiceOrb from '@/components/songjam/VoiceOrb';
 import SpaceGraphDOM from '@/components/songjam/SpaceGraphDOM';
 import { getEmpireBuilderByHostSlug, EmpireBuilder } from '@/services/db/empireBuilder.db';
 import SpaceChat from '@/components/songjam/SpaceChat';
+import MusicConsole from '@/components/songjam/MusicConsole';
 import { 
     goLive, 
     endSpace,
@@ -222,7 +223,8 @@ const RoomContent = ({
     onLeave,
     onEndSpace,
     currentUserInfo,
-    activeSessions
+    activeSessions,
+    daily
 }: { 
     hostProfile: HostProfile;
     liveSpace: LiveSpaceDoc;
@@ -231,8 +233,8 @@ const RoomContent = ({
     onEndSpace: () => void;
     currentUserInfo?: ParticipantInfo;
     activeSessions: SpaceParticipant[];
+    daily: ReturnType<typeof useDaily>;
 }) => {
-    const daily = useDaily();
     const localParticipant = useLocalParticipant();
     const participantIds = useParticipantIds();
     const [isMicEnabled, setIsMicEnabled] = useState(false);
@@ -283,11 +285,19 @@ const RoomContent = ({
                 </div>
                 
                 {/* Bottom row on mobile: Controls */}
-                <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+                <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 flex-wrap">
                     <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded-full text-slate-300 text-sm">
                         <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         <span>{participantIds.length}</span>
                     </div>
+                    
+                    {/* Music Console - Host Only */}
+                    {isHost && (
+                        <MusicConsole 
+                            hostTwitterUsername={hostProfile.username} 
+                            dailyCallObject={daily}
+                        />
+                    )}
                     
                     <button
                         onClick={handleToggleMic}
@@ -404,6 +414,7 @@ const RoomContent = ({
                     </>
                 )}
             </AnimatePresence>
+
         </div>
     );
 };
@@ -1155,6 +1166,7 @@ const HostSpaceContent = () => {
                     username: neynarUser?.username,
                 }}
                 activeSessions={activeSessions}
+                daily={daily}
             />
         );
     }
