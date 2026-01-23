@@ -24,9 +24,9 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const audioRef = useRef<HTMLAudioElement | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
-    const mixedStreamRef = useRef<MediaStream | null>(null);
+    const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
+    const destinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
 
     // Fetch music tracks
     useEffect(() => {
@@ -35,7 +35,6 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
                 setIsLoading(true);
                 setError(null);
 
-                // Query users collection by twitterUsername
                 const usersRef = collection(db, 'users');
                 const q = query(usersRef, where('twitterUsername', '==', hostTwitterUsername));
                 const querySnapshot = await getDocs(q);
@@ -70,119 +69,121 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
         }
     }, [hostTwitterUsername]);
 
-    // Setup audio mixing when playing
+    // Download and stream music to Daily.co
     useEffect(() => {
         if (!isPlaying || !tracks.length || !dailyCallObject) {
-            // Stop audio if not playing
-            if (audioRef.current) {
-                audioRef.current.pause();
+            // Stop playback
+            if (sourceNodeRef.current) {
+                sourceNodeRef.current.stop();
+                sourceNodeRef.current = null;
             }
-            
-            // Clean up mixed stream
-            if (mixedStreamRef.current) {
-                mixedStreamRef.current.getTracks().forEach(track => track.stop());
-                mixedStreamRef.current = null;
-            }
-            
-            if (audioContextRef.current) {
-                audioContextRef.current.close();
-                audioContextRef.current = null;
-            }
-            
             return;
         }
 
-        const setupAudioMixing = async () => {
+        const streamMusicToDaily = async () => {
             try {
-                console.log('Setting up audio mixing for Daily.co...');
+                console.log('Downloading and streaming music to Daily.co...');
                 
-                // Get microphone stream
-                const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                console.log('Got microphone stream');
-
-                // Create audio element for music
-                if (!audioRef.current) {
-                    audioRef.current = new Audio();
-                    audioRef.current.loop = true;
-                    audioRef.current.crossOrigin = 'anonymous';
+                // Create or reuse audio context
+                if (!audioContextRef.current) {
+                    audioContextRef.current = new AudioContext();
                 }
+                const audioContext = audioContextRef.current;
 
-                audioRef.current.src = tracks[currentTrackIndex].audioUrl;
-                await audioRef.current.play();
-                console.log('Music playing');
-
-                // Create Web Audio API context
-                const audioContext = new AudioContext();
-                audioContextRef.current = audioContext;
-
-                //Create MediaStream from audio element
-                // @ts-ignore
-                const musicStream = audioRef.current.captureStream() as MediaStream;
-
-                // Create audio nodes
-                const micSource = audioContext.createMediaStreamSource(micStream);
-                const musicSource = audioContext.createMediaStreamSource(musicStream);
-                const destination = audioContext.createMediaStreamDestination();
-
-                // Create gain nodes for volume control
-                const micGain = audioContext.createGain();
-                const musicGain = audioContext.createGain();
+                // Download the audio file
+                const audioUrl = tracks[currentTrackIndex].audioUrl;
+                console.log('Fetching audio from:', audioUrl);
                 
-                micGain.gain.value = 1.0; // Full microphone volume
-                musicGain.gain.value = 0.5; // Lower music volume so it doesn't overpower voice
+                const response = await fetch(audioUrl);
+                const arrayBuffer = await response.arrayBuffer();
+                console.log('Audio downloaded, size:', arrayBuffer.byteLength, 'bytes');
 
-                // Connect the audio graph
-                micSource.connect(micGain);
-                musicSource.connect(musicGain);
-                micGain.connect(destination);
-                musicGain.connect(destination);
+                // Decode the audio data
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                console.log('Audio decoded, duration:', audioBuffer.duration, 'seconds');
 
-                // Get the mixed stream
-                const mixedStream = destination.stream;
-                mixedStreamRef.current = mixedStream;
-                
-                console.log('Audio streams mixed');
+                // Create source node
+                const sourceNode = audioContext.createBufferSource();
+                sourceNode.buffer = audioBuffer;
+                sourceNode.loop = true; // Loop the track
+                sourceNodeRef.current = sourceNode;
 
-                // Set the mixed stream as Daily input
-                await dailyCallObject.setInputDevicesAsync({
-                    audioSource: mixedStream.getAudioTracks()[0]
+                // Create gain node for volume control
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 0.7; // 70% volume
+
+                // Create media stream destination
+                if (!destinationRef.current) {
+                    destinationRef.current = audioContext.createMediaStreamDestination();
+                }
+                const destination = destinationRef.current;
+
+                // Connect: source -> gain -> destination
+                sourceNode.connect(gainNode);
+                gainNode.connect(destination);
+
+                // Get the media stream
+                const mediaStream = destination.stream;
+                const audioTrack = mediaStream.getAudioTracks()[0];
+
+                console.log('MediaStream created, streaming to Daily.co...');
+
+                // Send to Daily.co as custom track
+                await dailyCallObject.startCustomTrack({
+                    track: audioTrack,
+                    trackName: 'music-stream',
+                    mode: 'music'
                 });
 
-                console.log('Mixed audio (mic + music) is now broadcasting to all participants');
+                // Start playback
+                sourceNode.start(0);
+                console.log('Music is now streaming to all participants!');
+
+                // Handle when track ends (though loop=true should prevent this)
+                sourceNode.onended = () => {
+                    console.log('Track ended');
+                    if (isPlaying) {
+                        setIsPlaying(false);
+                    }
+                };
 
             } catch (err) {
-                console.error('Error setting up audio mixing:', err);
+                console.error('Error streaming music:', err);
+                setError('Failed to stream audio');
                 setIsPlaying(false);
-                setError('Failed to broadcast audio');
             }
         };
 
-        setupAudioMixing();
+        streamMusicToDaily();
 
         // Cleanup
         return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
+            if (sourceNodeRef.current) {
+                try {
+                    sourceNodeRef.current.stop();
+                } catch (e) {
+                    // Already stopped
+                }
+                sourceNodeRef.current = null;
             }
             
-            if (mixedStreamRef.current) {
-                mixedStreamRef.current.getTracks().forEach(track => track.stop());
-                mixedStreamRef.current = null;
+            if (dailyCallObject) {
+                dailyCallObject.stopCustomTrack('music-stream').catch(() => {
+                    // Track might not exist
+                });
             }
-            
+        };
+    }, [isPlaying, currentTrackIndex, tracks, dailyCallObject]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
             if (audioContextRef.current) {
                 audioContextRef.current.close();
                 audioContextRef.current = null;
             }
-
-            // Restore normal microphone
-            if (dailyCallObject) {
-                dailyCallObject.setInputDevicesAsync({
-                    audioSource: false
-                }).catch(console.error);
-            }
         };
-    }, [isPlaying, currentTrackIndex, tracks, dailyCallObject]);
+    }, []);
 
     const handlePlayPause = () => {
         setIsPlaying(!isPlaying);
@@ -190,7 +191,7 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
 
     const handleTrackChange = (index: number) => {
         setCurrentTrackIndex(index);
-        // Restart if already playing
+        // Restart playback if already playing
         if (isPlaying) {
             setIsPlaying(false);
             setTimeout(() => setIsPlaying(true), 100);
@@ -226,7 +227,6 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
 
     return (
         <div className="flex items-center gap-2">
-            {/* Play/Pause Button */}
             <button
                 onClick={handlePlayPause}
                 className={`p-2 rounded-full transition-all ${
@@ -234,7 +234,7 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
                         ? 'bg-green-500 hover:bg-green-600' 
                         : 'bg-slate-700 hover:bg-slate-600'
                 }`}
-                title={isPlaying ? 'Pause music' : 'Play music'}
+                title={isPlaying ? 'Stop music' : 'Play music'}
             >
                 {isPlaying ? (
                     <Pause className="w-4 h-4 text-white fill-white" />
@@ -243,7 +243,6 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
                 )}
             </button>
 
-            {/* Track Selector Dropdown */}
             <div className="relative">
                 <select
                     value={currentTrackIndex}
