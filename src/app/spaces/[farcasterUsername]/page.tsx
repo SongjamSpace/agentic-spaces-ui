@@ -20,8 +20,7 @@ import {
     SpaceParticipant
 } from '@/services/db/liveSpaces.db';
 import { NeynarAuthButton, useNeynarContext, SIWN_variant } from '@neynar/react';
-import { neynarClient } from "@/services/neynar-client";
-import { Mic, MicOff, Users, LogOut, Radio, Crown, Loader2, Send, Wifi } from 'lucide-react';
+import { Mic, MicOff, Users, LogOut, Radio, Crown, Loader2, Send, Wifi, MessageCircle, X } from 'lucide-react';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -236,6 +235,7 @@ const RoomContent = ({
     const localParticipant = useLocalParticipant();
     const participantIds = useParticipantIds();
     const [isMicEnabled, setIsMicEnabled] = useState(false);
+    const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
     const handleToggleMic = useCallback(() => {
         if (!daily) return;
@@ -253,56 +253,58 @@ const RoomContent = ({
         <div className="flex flex-col h-screen bg-slate-950 text-white">
             <DailyAudio />
             
-            {/* Header */}
+            {/* Header - stacks vertically on mobile */}
             <motion.div 
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex justify-between items-center p-6 border-b border-slate-800"
+                className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 sm:p-6 border-b border-slate-800 gap-3 sm:gap-0"
             >
-                <div className="flex items-center gap-4">
+                {/* Top row: Profile info */}
+                <div className="flex items-center gap-3 sm:gap-4">
                     {hostProfile.pfpUrl ? (
                          <img 
                             src={hostProfile.pfpUrl} 
                             alt={hostProfile.displayName}
-                            className="w-12 h-12 rounded-full border-2 border-purple-500"
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-purple-500 flex-shrink-0"
                         />
                     ) : (
-                        <div className="w-12 h-12 rounded-full border-2 border-purple-500 bg-slate-800 flex items-center justify-center">
-                             <span className="text-xl font-bold">{hostProfile.displayName.charAt(0)}</span>
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-purple-500 bg-slate-800 flex items-center justify-center flex-shrink-0">
+                             <span className="text-lg sm:text-xl font-bold">{hostProfile.displayName.charAt(0)}</span>
                         </div>
                     )}
                    
-                    <div>
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent truncate">
                             {liveSpace.title || `${hostProfile.displayName}'s Space`}
                         </h1>
-                        <p className="text-slate-400 text-sm">@{hostProfile.username}</p>
+                        <p className="text-slate-400 text-xs sm:text-sm">@{hostProfile.username}</p>
                     </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-full text-slate-300">
-                        <Users className="w-4 h-4" />
+                {/* Bottom row on mobile: Controls */}
+                <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+                    <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-slate-800 rounded-full text-slate-300 text-sm">
+                        <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         <span>{participantIds.length}</span>
                     </div>
                     
                     <button
                         onClick={handleToggleMic}
                         className={`
-                            p-3 rounded-full transition-all
+                            p-2.5 sm:p-3 rounded-full transition-all
                             ${isMicEnabled 
                                 ? 'bg-green-500 hover:bg-green-600' 
                                 : 'bg-slate-700 hover:bg-slate-600'
                             }
                         `}
                     >
-                        {isMicEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                        {isMicEnabled ? <Mic className="w-4 h-4 sm:w-5 sm:h-5" /> : <MicOff className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </button>
                     
                     {isHost && (
                         <button
                             onClick={onEndSpace}
-                            className="px-4 py-2 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all text-sm font-medium"
+                            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all text-xs sm:text-sm font-medium"
                         >
                             End Space
                         </button>
@@ -310,9 +312,9 @@ const RoomContent = ({
                     
                     <button
                         onClick={handleLeave}
-                        className="p-3 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all"
+                        className="p-2.5 sm:p-3 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all"
                     >
-                        <LogOut className="w-5 h-5" />
+                        <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                 </div>
             </motion.div>
@@ -334,7 +336,7 @@ const RoomContent = ({
                     </div>
                 </div>
 
-                {/* Right Side Chat Panel */}
+                {/* Right Side Chat Panel - Desktop */}
                 <div className="hidden md:block h-full relative z-20">
                     <SpaceChat 
                         currentUser={{
@@ -346,7 +348,61 @@ const RoomContent = ({
                 </div>
             </div>
 
+            {/* Mobile Chat Toggle Button */}
+            <button
+                onClick={() => setIsMobileChatOpen(true)}
+                className="md:hidden fixed bottom-6 right-6 z-30 p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg shadow-purple-500/30 transition-all"
+            >
+                <MessageCircle className="w-6 h-6" />
+            </button>
 
+            {/* Mobile Chat Slide-up Panel */}
+            <AnimatePresence>
+                {isMobileChatOpen && (
+                    <>
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsMobileChatOpen(false)}
+                            className="md:hidden fixed inset-0 bg-black/50 z-40"
+                        />
+                        
+                        {/* Chat Panel */}
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            className="md:hidden fixed bottom-0 left-0 right-0 h-[75vh] bg-slate-900 rounded-t-3xl z-50 overflow-hidden"
+                        >
+                            {/* Handle bar and close button */}
+                            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+                                <div className="w-10" /> {/* Spacer */}
+                                <div className="w-12 h-1.5 bg-slate-700 rounded-full" />
+                                <button
+                                    onClick={() => setIsMobileChatOpen(false)}
+                                    className="p-2 hover:bg-slate-800 rounded-full transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-slate-400" />
+                                </button>
+                            </div>
+                            
+                            {/* Chat content */}
+                            <div className="h-[calc(75vh-60px)]">
+                                <SpaceChat 
+                                    currentUser={{
+                                        username: currentUserInfo?.username || 'Guest',
+                                        displayName: currentUserInfo?.displayName,
+                                        pfpUrl: currentUserInfo?.pfpUrl
+                                    }}
+                                />
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

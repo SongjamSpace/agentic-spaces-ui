@@ -75,7 +75,7 @@ const SpaceChat = ({ currentUser }: SpaceChatProps) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-900 border-l border-slate-800 w-80 lg:w-96">
+        <div className="flex flex-col h-full bg-slate-900 md:border-l border-slate-800 w-full md:w-80 lg:w-96">
             <div className="p-4 border-b border-slate-800">
                 <h2 className="text-lg font-semibold text-white">Space Chat</h2>
             </div>
