@@ -359,7 +359,7 @@ export default function SpacesPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="relative rounded-2xl overflow-hidden cursor-pointer group"
-                    onClick={() => router.push(`/spaces/${space.hostSlug}`)}
+                    onClick={() => router.push(`/${space.hostSlug}`)}
                   >
                     {/* Background with host avatar */}
                     <div 
@@ -449,7 +449,7 @@ export default function SpacesPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/spaces/${token.hostSlug}`);
+                        router.push(`/${token.hostSlug}`);
                       }}
                       className="px-3 py-1.5 text-sm font-medium bg-purple-600/20 text-purple-400 rounded-lg hover:bg-purple-600/30 transition-colors whitespace-nowrap"
                     >
