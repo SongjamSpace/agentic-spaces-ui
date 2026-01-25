@@ -9,7 +9,8 @@ import VoiceOrb from '@/components/songjam/VoiceOrb';
 import SpaceGraphDOM from '@/components/songjam/SpaceGraphDOM';
 import { getEmpireBuilderByHostSlug, EmpireBuilder } from '@/services/db/empireBuilder.db';
 import SpaceChat from '@/components/songjam/SpaceChat';
-// import MusicConsole from '@/components/songjam/MusicConsole';
+import MusicConsole from '@/components/songjam/MusicConsole';
+import MusicPlayer from '@/components/songjam/MusicPlayer';
 import { 
     goLive, 
     endSpace,
@@ -213,6 +214,7 @@ interface HostProfile {
     username: string;
     displayName: string;
     pfpUrl?: string;
+    twitterId: string;
 }
 
 // Main room content component
@@ -254,7 +256,8 @@ const RoomContent = ({
 
     return (
         <div className="flex flex-col h-screen bg-slate-950 text-white">
-            <DailyAudio />
+            <DailyAudio maxSpeakers={10} autoSubscribeActiveSpeaker />
+            <MusicPlayer dailyCallObject={daily} />
             
             {/* Header - stacks vertically on mobile */}
             <motion.div 
@@ -292,12 +295,13 @@ const RoomContent = ({
                     </div>
                     
                     {/* Music Console - Host Only */}
-                    {/* {isHost && (
+                    {isHost && (
                         <MusicConsole 
-                            hostTwitterUsername={hostProfile.username} 
+                            hostTwitterId={hostProfile.twitterId} 
                             dailyCallObject={daily}
+                            hostUsername={hostProfile.username}
                         />
-                    )} */}
+                    )}
                     
                     <button
                         onClick={handleToggleMic}
@@ -1155,7 +1159,7 @@ const HostSpaceContent = () => {
 
         return (
             <RoomContent 
-                hostProfile={hostProfile}
+                hostProfile={{...hostProfile, twitterId: hostData.twitterId}}
                 liveSpace={liveSpace}
                 isHost={isHost || false}
                 onLeave={handleLeaveRoom}

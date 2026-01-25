@@ -12,11 +12,12 @@ interface MusicTrack {
 }
 
 interface MusicConsoleProps {
-    hostTwitterUsername: string;
+    hostTwitterId: string;
     dailyCallObject: DailyCall | null;
+    hostUsername: string;
 }
 
-export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: MusicConsoleProps) {
+export default function MusicConsole({ hostTwitterId, dailyCallObject, hostUsername }: MusicConsoleProps) {
     const [tracks, setTracks] = useState<MusicTrack[]>([]);
     const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -35,25 +36,25 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
                 setError(null);
 
                 const usersRef = collection(db, 'users');
-                const q = query(usersRef, where('twitterUsername', '==', hostTwitterUsername));
+                const q = query(usersRef, where('accountId', '==', hostTwitterId));
                 const querySnapshot = await getDocs(q);
                 
-                // if (querySnapshot.empty) {
-                //     setError('User not found');
-                //     setTracks([]);
-                //     return;
-                // }
+                if (querySnapshot.empty) {
+                    setError('User not found');
+                    setTracks([]);
+                    return;
+                }
 
                 // Get the document ID (first matching user)
                 const userDoc = querySnapshot.docs[0];
-                // const userId = userDoc.id;
+                const userId = userDoc.id;
 
                 // Fetch music uploads using the document ID
-                const musicTracks = await getMusicUploadsByUserId('0198bf03-b96b-4ed1-928a-2faa127e67a5');
+                const musicTracks = await getMusicUploadsByUserId(userId);
                 setTracks(musicTracks);
 
                 if (musicTracks.length === 0) {
-                    setError('No music uploaded yet');
+                    setError('Playlist not found');
                 }
             } catch (err) {
                 console.error('Error fetching music:', err);
@@ -63,10 +64,13 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
             }
         };
 
-        if (hostTwitterUsername) {
+        if (hostTwitterId) {
             fetchMusic();
+        } else {
+            setError('Account not found');
+            setTracks([]);
         }
-    }, [hostTwitterUsername]);
+    }, [hostTwitterId]);
 
     // Download and stream music to Daily.co
     useEffect(() => {
@@ -81,7 +85,6 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
 
         const streamMusicToDaily = async () => {
             try {
-                console.log('Downloading and streaming music to Daily.co...');
                 
                 // Create or reuse audio context
                 if (!audioContextRef.current) {
@@ -91,15 +94,12 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
 
                 // Download the audio file
                 const audioUrl = tracks[currentTrackIndex].audioUrl;
-                console.log('Fetching audio from:', audioUrl);
                 
                 const response = await fetch(audioUrl);
                 const arrayBuffer = await response.arrayBuffer();
-                console.log('Audio downloaded, size:', arrayBuffer.byteLength, 'bytes');
 
                 // Decode the audio data
                 const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                console.log('Audio decoded, duration:', audioBuffer.duration, 'seconds');
 
                 // Create source node
                 const sourceNode = audioContext.createBufferSource();
@@ -128,9 +128,7 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
                 const mediaStream = destination.stream;
                 const audioTrack = mediaStream.getAudioTracks()[0];
 
-                console.log('MediaStream created, streaming to Daily.co...');
-
-                // Send to Daily.co as custom track
+                // Send to Daily.co as custom track with music mode for better quality
                 await dailyCallObject.startCustomTrack({
                     track: audioTrack,
                     trackName: 'music-stream',
@@ -139,16 +137,12 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
 
                 // Start playback
                 sourceNode.start(0);
-                console.log('Music is now streaming!');
 
-                // Save music state to database so participants know music is playing
-                await updateMusicState(hostTwitterUsername, true, 'music-stream');
-                console.log('Music state saved to database');
-                console.log('Note: Daily.co auto-subscribe is enabled, custom tracks should be automatically subscribed');
+                // Save music state to database
+                await updateMusicState(hostUsername, true, 'music-stream'); //TODO: fix this bs
 
                 // Handle when track ends (though loop=true should prevent this)
                 sourceNode.onended = () => {
-                    console.log('Track ended');
                     if (isPlaying) {
                         setIsPlaying(false);
                     }
@@ -181,7 +175,7 @@ export default function MusicConsole({ hostTwitterUsername, dailyCallObject }: M
             }
 
             // Clear music state from database
-            clearMusicState(hostTwitterUsername).catch(err => {
+            clearMusicState(hostUsername).catch(err => {
                 console.error('Error clearing music state:', err);
             });
         };
